@@ -1,0 +1,35 @@
+# Node modules
+node_modules/
+
+# Output directories
+dist/
+build/
+
+# Environment variables
+.env
+.env.*.local
+
+# SQLite database file
+*.sqlite
+*.db
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE settings
+.vscode/
+.idea/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Optional: Ignore local scripts
+scripts/
+*.sh
+
+# Typescript cache
+*.tsbuildinfo
