@@ -20,7 +20,7 @@
     "skipLibCheck": false,
     "strict": false,
     "target": "esnext",
-    "outDir": "../dist",
+    "outDir": "dist",
     "removeComments": true
   },
   "exclude": [
