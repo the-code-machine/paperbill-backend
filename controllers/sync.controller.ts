@@ -154,27 +154,28 @@ export const pushToLocalDb = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid sync payload" });
     }
 
-    // You can improve this by wrapping each table insert in a transaction if your sqlite supports it
     for (const tableName of Object.keys(data)) {
       const rows = data[tableName];
       if (!Array.isArray(rows)) continue;
 
-      for (const row of rows) {
-        try {
-          // Upsert logic: try update first, if no rows affected, insert
-          const existing = await db(tableName).where("id", row.id).first();
-          if (existing) {
-            await db(tableName).where("id", row.id).update(row);
-          } else {
+      try {
+        // ❗ Delete existing records
+        await db(tableName).delete(); // This should call your custom .del() method
+
+        // ✅ Insert new rows
+        if (rows.length > 0) {
+          for (const row of rows) {
             await db(tableName).insert(row);
           }
-        } catch (err) {
-          console.warn(`Failed to sync row in table ${tableName}:`, err);
         }
+
+        console.log(`Synced ${tableName} (${rows.length} records)`);
+      } catch (err) {
+        console.warn(`Error syncing table ${tableName}:`, err);
       }
     }
 
-    return res.status(200).json({ success: true, message: "Data pushed successfully" });
+    return res.status(200).json({ success: true, message: "Cloud DB synced successfully" });
   } catch (err) {
     console.error("Error in pushToLocalDb:", err);
     return res.status(500).json({ error: "Internal server error" });
