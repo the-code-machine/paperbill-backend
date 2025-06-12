@@ -149,14 +149,16 @@ export const pushToLocalDb = async (req: Request, res: Response) => {
   try {
     const data = req.body;
    const firmId = req.query.firmId as string;
-const isInitialSync = !firmId || /* logic to check if firmId exists in DB */;
+
 
 if (!data || typeof data !== "object") {
   return res.status(400).json({ error: "Invalid sync payload" });
 }
-
-for (const tableName of Object.keys(data)) {
-  const rows = data[tableName];
+    // ✅ Check if this firm already exists
+    const firmExists = await db("firms").where("id", firmId).first();
+    const isInitialSync = !firmExists;
+   for (const tableName of Object.keys(data)) {
+    const rows = data[tableName];
   if (!Array.isArray(rows)) continue;
 
   try {
