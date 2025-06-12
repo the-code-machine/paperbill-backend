@@ -145,10 +145,14 @@ export const pullLocalData = async (req: Request, res: Response) => {
   }
 };
 
-
 export const pushToLocalDb = async (req: Request, res: Response) => {
   try {
     const data = req.body;
+    const firmId = req.query.firmId as string;
+
+    if (!firmId) {
+      return res.status(400).json({ error: "firmId is required" });
+    }
 
     if (!data || typeof data !== "object") {
       return res.status(400).json({ error: "Invalid sync payload" });
@@ -159,14 +163,12 @@ export const pushToLocalDb = async (req: Request, res: Response) => {
       if (!Array.isArray(rows)) continue;
 
       try {
-        // ❗ Delete existing records
-        await db(tableName).delete(); // This should call your custom .del() method
+        // ✅ Delete only records of this firm
+        await db(tableName, firmId).delete(); // assumes your builder respects firmId
 
         // ✅ Insert new rows
-        if (rows.length > 0) {
-          for (const row of rows) {
-            await db(tableName).insert(row);
-          }
+        for (const row of rows) {
+          await db(tableName).insert(row);
         }
 
         console.log(`Synced ${tableName} (${rows.length} records)`);
@@ -175,9 +177,10 @@ export const pushToLocalDb = async (req: Request, res: Response) => {
       }
     }
 
-    return res.status(200).json({ success: true, message: "Cloud DB synced successfully" });
+    return res.status(200).json({ success: true, message: "Data pushed successfully" });
   } catch (err) {
     console.error("Error in pushToLocalDb:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
+
