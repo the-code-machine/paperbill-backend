@@ -1,5 +1,5 @@
 import { Router } from "express";
-import express from "express";
+
 import * as unitController from "./controllers/units.controller";
 import * as unitConversionController from "./controllers/unit-conversions.controller";
 import * as categoryController from "./controllers/categories.controller";
@@ -13,10 +13,12 @@ import * as documentController from "./controllers/documents.controller";
 import * as initController from "./controllers/init.controller";
 import * as initDataController from "./controllers/initData.controller";
 import * as firmController from "./controllers/firms.controller";
-import * as syncToCloud from "./controllers/syncCloud.controller";
+
 import * as shareController from "./controllers/sync.controller";
 const router = Router();
 
+router.post("/sync/pull", shareController.pullLocalData);
+router.post("/sync/push", shareController.pushToLocalDb);
 // Initialization
 router.get("/init", initController.initializeHandler);
 router.get("/initData", initDataController.initDataHandler);
@@ -97,30 +99,6 @@ router.delete("/documents/:id", documentController.deleteDocument);
 
 
 
-// GET /sync/pull?firmId=FIRM123
-router.get('/sync/pull', async (req, res) => {
-  try {
-    const firmId = req.query.firmId;
-    if (!firmId) return res.status(400).json({ error: 'firmId is required' });
 
-    const tables = [
-      'categories', 'units', 'unit_conversions', 'items', 'groups',
-      'parties', 'party_additional_fields', 'documents', 'document_items',
-      'document_charges', 'document_transportation', 'document_relationships',
-      'stock_movements', 'bank_accounts', 'bank_transactions', 'payments'
-    ];
-
-    const results: any = {};
-    for (const table of tables) {
-      const rows = await db.all(`SELECT * FROM ${table} WHERE firmId = ?`, [firmId]);
-      results[table] = rows;
-    }
-
-    res.json(results);
-  } catch (error) {
-    console.error('Pull sync failed:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
 
 export default router;
