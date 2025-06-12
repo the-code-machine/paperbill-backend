@@ -27,9 +27,12 @@ export async function updateSharedUser(req, res) {
     const { id } = req.params;
     const { role } = req.body;
 
-    const updated = await db("firm_user_shares").where("id", id).update({ role });
+    const updated = await db("firm_user_shares")
+      .where("id", id)
+      .update({ role });
 
-    if (updated === 0) return res.status(404).json({ error: "Shared user not found" });
+    if (updated === 0)
+      return res.status(404).json({ error: "Shared user not found" });
 
     res.json({ message: "Shared user updated" });
   } catch (error) {
@@ -45,7 +48,8 @@ export async function deleteSharedUser(req, res) {
 
     const deleted = await db("firm_user_shares").where("id", id).delete();
 
-    if (deleted === 0) return res.status(404).json({ error: "Shared user not found" });
+    if (deleted === 0)
+      return res.status(404).json({ error: "Shared user not found" });
 
     res.json({ message: "Shared user deleted" });
   } catch (error) {
@@ -59,7 +63,9 @@ export async function getSharedUsersByFirm(req, res) {
   try {
     const { firm_id } = req.params;
 
-    const users = await db("firm_user_shares").where("firm_id", firm_id).select();
+    const users = await db("firm_user_shares")
+      .where("firm_id", firm_id)
+      .select();
 
     res.json(users);
   } catch (error) {
@@ -73,7 +79,9 @@ export async function getFirmsByUserNumber(req, res) {
   try {
     const { user_number } = req.params;
 
-    const shares = await db("firm_user_shares").where("user_number", user_number).select();
+    const shares = await db("firm_user_shares")
+      .where("user_number", user_number)
+      .select();
     const firmIds = shares.map((s) => s.firm_id);
 
     if (firmIds.length === 0) return res.json([]);
@@ -106,8 +114,6 @@ export async function toggleSyncEnabled(req, res) {
   }
 }
 
-
-
 export const pullLocalData = async (req: Request, res: Response) => {
   try {
     const firmId = req.query.firmId as string;
@@ -129,7 +135,7 @@ export const pullLocalData = async (req: Request, res: Response) => {
       "stock_movements",
       "bank_accounts",
       "bank_transactions",
-      "payments"
+      "payments",
     ];
 
     const result: Record<string, any[]> = {};
@@ -148,38 +154,39 @@ export const pullLocalData = async (req: Request, res: Response) => {
 export const pushToLocalDb = async (req: Request, res: Response) => {
   try {
     const data = req.body;
-   const firmId = req.query.firmId as string;
+    const firmId = req.query.firmId as string;
 
-
-if (!data || typeof data !== "object") {
-  return res.status(400).json({ error: "Invalid sync payload" });
-}
+    if (!data || typeof data !== "object") {
+      return res.status(400).json({ error: "Invalid sync payload" });
+    }
     // ✅ Check if this firm already exists
     const firmExists = await db("firms").where("id", firmId).first();
     const isInitialSync = !firmExists;
-   for (const tableName of Object.keys(data)) {
-    const rows = data[tableName];
-  if (!Array.isArray(rows)) continue;
 
-  try {
-    if (!isInitialSync) {
-      // Scoped deletion for existing firm
-      await db(tableName).where("firm_id", firmId).delete();
+    for (const tableName of Object.keys(data)) {
+      const rows = data[tableName];
+      if (!Array.isArray(rows)) continue;
+
+      try {
+        if (!isInitialSync) {
+          // Scoped deletion for existing firm
+          await db(tableName).where("firmId", firmId).delete();
+        }
+
+        // Insert all rows (initial or update)
+        for (const row of rows) {
+          await db(tableName).insert(row);
+        }
+      } catch (err) {
+        console.warn(`Error syncing table ${tableName}:`, err);
+      }
     }
 
-    // Insert all rows (initial or update)
-    for (const row of rows) {
-      await db(tableName).insert(row);
-    }
-  } catch (err) {
-    console.warn(`Error syncing table ${tableName}:`, err);
-  }
-}
-
-    return res.status(200).json({ success: true, message: "Data pushed successfully" });
+    return res
+      .status(200)
+      .json({ success: true, message: "Data pushed successfully" });
   } catch (err) {
     console.error("Error in pushToLocalDb:", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
-
