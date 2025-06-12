@@ -148,34 +148,31 @@ export const pullLocalData = async (req: Request, res: Response) => {
 export const pushToLocalDb = async (req: Request, res: Response) => {
   try {
     const data = req.body;
-    const firmId = req.query.firmId as string;
+   const firmId = req.query.firmId as string;
+const isInitialSync = !firmId || /* logic to check if firmId exists in DB */;
 
-    if (!firmId) {
-      return res.status(400).json({ error: "firmId is required" });
+if (!data || typeof data !== "object") {
+  return res.status(400).json({ error: "Invalid sync payload" });
+}
+
+for (const tableName of Object.keys(data)) {
+  const rows = data[tableName];
+  if (!Array.isArray(rows)) continue;
+
+  try {
+    if (!isInitialSync) {
+      // Scoped deletion for existing firm
+      await db(tableName).where("firm_id", firmId).delete();
     }
 
-    if (!data || typeof data !== "object") {
-      return res.status(400).json({ error: "Invalid sync payload" });
+    // Insert all rows (initial or update)
+    for (const row of rows) {
+      await db(tableName).insert(row);
     }
-
-    for (const tableName of Object.keys(data)) {
-      const rows = data[tableName];
-      if (!Array.isArray(rows)) continue;
-
-      try {
-        // ✅ Delete only records of this firm
-        await db(tableName, firmId).delete(); // assumes your builder respects firmId
-
-        // ✅ Insert new rows
-        for (const row of rows) {
-          await db(tableName).insert(row);
-        }
-
-        console.log(`Synced ${tableName} (${rows.length} records)`);
-      } catch (err) {
-        console.warn(`Error syncing table ${tableName}:`, err);
-      }
-    }
+  } catch (err) {
+    console.warn(`Error syncing table ${tableName}:`, err);
+  }
+}
 
     return res.status(200).json({ success: true, message: "Data pushed successfully" });
   } catch (err) {
