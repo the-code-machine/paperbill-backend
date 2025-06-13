@@ -82,12 +82,8 @@ export async function getFirmsByUserNumber(req, res) {
     const shares = await db("firm_user_shares")
       .where("user_number", user_number)
       .select();
-    const firmIds = shares.map((s) => s.firm_id);
-
-    if (firmIds.length === 0) return res.json([]);
-
-    const firms = await db("firms").whereIn("id", firmIds).select();
-    res.json(firms);
+  
+    res.json(shares);
   } catch (error) {
     console.error("Error fetching firms by user:", error);
     res.status(500).json({ error: "Failed to get firms" });
