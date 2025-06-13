@@ -79,16 +79,39 @@ export async function getFirmsByUserNumber(req, res) {
   try {
     const { user_number } = req.params;
 
+    // Get all shares for the user
     const shares = await db("firm_user_shares")
       .where("user_number", user_number)
       .select();
-  
-    res.json(shares);
+
+    const firmIds = shares.map((s) => s.firm_id);
+
+    if (firmIds.length === 0) return res.json([]);
+
+    // Get all firm details for the collected firm IDs
+    const firms = await db("firms")
+      .whereIn("id", firmIds)
+      .select();
+
+    // Create a map for quick lookup of firm name by ID
+    const firmMap = {};
+    firms.forEach(firm => {
+      firmMap[firm.id] = firm.name;
+    });
+
+    // Merge firm name into each share object
+    const enrichedShares = shares.map(share => ({
+      ...share,
+      firm_name: firmMap[share.firm_id] || null,
+    }));
+
+    res.json(enrichedShares);
   } catch (error) {
     console.error("Error fetching firms by user:", error);
     res.status(500).json({ error: "Failed to get firms" });
   }
 }
+
 
 // Toggle sync_enabled status of a firm
 export async function toggleSyncEnabled(req, res) {
